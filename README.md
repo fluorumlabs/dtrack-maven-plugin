@@ -1,5 +1,7 @@
 # dtrack-maven-plugin
 
+![Maven Central](https://img.shields.io/maven-central/v/com.github.fluorumlabs/dtrack-maven-plugin)
+
 `dtrack-maven-plugin` is an easy-to-use tool to generate SBOM (software bill of materials) and upload them to [Dependency-Track](https://dependencytrack.org/) SCA.
 It is specifically designed for simplified CI/CD integration and can work without any changes to project `pom.xml` files.
 One of the key differences from the traditional `cyclonedx-maven-plugin`/`dependency-track-maven-plugin` combination is that `dtrack-maven-plugin` can be used to extract NPM dependencies, specified inside [Vaadin](https://vaadin.com) projects. Note that NPM dependency resolution requires NPM installation.
