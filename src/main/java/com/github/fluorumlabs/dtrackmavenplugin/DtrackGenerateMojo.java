@@ -245,10 +245,46 @@ public class DtrackGenerateMojo extends AbstractMojo {
     protected void processDependencies() throws IOException, ProjectBuildingException {
         MavenProject projectToScan = project;
 
+        if (project.getPackaging().equalsIgnoreCase("pom")) {
+            getLog().info("Collecting managed dependencies...");
+            projectToScan = inlineDependencyManagement(project);
+        } else {
+            getLog().info("Collecting dependencies...");
+        }
+
         DependencyTree dependencyTree = new DependencyTree(projectToScan.getArtifacts(), getArtifactFilter());
         dependencyTree.forEachDependencyPair(projectToScan.getArtifact(), this::processDependency);
 
         processNpmDependencies(projectToScan);
+    }
+
+    private MavenProject inlineDependencyManagement(MavenProject originalProject) throws IOException, ProjectBuildingException {
+        Model model = originalProject.getModel().clone();
+
+        // Copy dependency management to dependencies, omitting versions
+        DependencyManagement effectiveDependencyManagement = originalProject.getDependencyManagement();
+        if (effectiveDependencyManagement != null && effectiveDependencyManagement.getDependencies() != null) {
+            for (Dependency dependency : effectiveDependencyManagement.getDependencies()) {
+                Dependency clone = dependency.clone();
+                clone.setVersion(null);
+                model.addDependency(clone);
+            }
+        }
+
+        File tempPom = Files.createTempFile("mvn", "pom").toFile();
+        try (Writer wrt = new FileWriter(tempPom)) {
+            new MavenXpp3Writer().write(wrt, model);
+        }
+
+        ProjectBuildingRequest projectBuildingRequest =
+                new DefaultProjectBuildingRequest(session.getProjectBuildingRequest());
+
+        projectBuildingRequest.setResolveDependencies(true);
+        ProjectBuildingResult build = projectBuilder.build(tempPom, projectBuildingRequest);
+
+        tempPom.delete();
+
+        return build.getProject();
     }
 
     private void processNpmDependencies(MavenProject mavenProject) {
