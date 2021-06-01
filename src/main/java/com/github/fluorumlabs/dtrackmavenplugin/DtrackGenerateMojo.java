@@ -213,6 +213,10 @@ public class DtrackGenerateMojo extends AbstractMojo {
     }
 
     private boolean shouldSkip() {
+        // Skip parent module
+        if (!project.getModules().isEmpty()) {
+            return true;
+        }
         // Skip if property dtrack.skip is set to true
         if (project.getProperties().getProperty("dtrack.skip", "false").equalsIgnoreCase("true")) {
             return true;
