@@ -10,7 +10,7 @@ One of the key differences from the traditional `cyclonedx-maven-plugin`/`depend
 
 Even though this plug-in is not bound by default to any of the life-cycle stages, it requires the projects to be built before running:
 
-`mvn package com.github.fluorumlabs:dtrack-maven-plugin:1.0.0:upload`
+`mvn package com.github.fluorumlabs:dtrack-maven-plugin:1.1.0:upload`
 
 Alternatively, you can add plug-in to you `pom.xml`:
 
@@ -27,6 +27,8 @@ Alternatively, you can add plug-in to you `pom.xml`:
 And use shorthand
 
 `mvn package dtrack:upload`
+
+If you don't need to upload generated SBOM to Dependency-Track, you can use `dtrack:generate` goal, which will create CycloneDX 1.2 files in the `/target` directory.
 
 ## Configuration
 
