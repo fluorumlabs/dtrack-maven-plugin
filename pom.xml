@@ -45,7 +45,7 @@
     <groupId>com.github.fluorumlabs</groupId>
     <artifactId>dtrack-maven-plugin</artifactId>
     <packaging>maven-plugin</packaging>
-    <version>1.1.0</version>
+    <version>1.1.1</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -70,7 +70,7 @@
         <dependency>
             <groupId>io.github.classgraph</groupId>
             <artifactId>classgraph</artifactId>
-            <version>4.8.105</version>
+            <version>4.8.106</version>
         </dependency>
         <dependency>
             <groupId>com.squareup.okhttp</groupId>
@@ -141,11 +141,6 @@
             <groupId>org.cyclonedx</groupId>
             <artifactId>cyclonedx-core-java</artifactId>
             <version>5.0.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.maven.shared</groupId>
-            <artifactId>maven-artifact-transfer</artifactId>
-            <version>0.13.1</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
