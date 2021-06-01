@@ -17,7 +17,6 @@
 package com.github.fluorumlabs.dtrackmavenplugin.engine;
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.project.MavenProject;
 
 import java.util.*;
 import java.util.function.BiPredicate;
@@ -27,13 +26,11 @@ import java.util.stream.Collectors;
 public class DependencyTree {
 	private final Map<String, Artifact> artifactMap = new HashMap<>();
 	private final Map<String, Set<String>> artifactSetMap = new HashMap<>();
-	private final Artifact root;
 	private final Predicate<Artifact> filter;
 
-	public DependencyTree(MavenProject project, Predicate<Artifact> filter) {
-		root = project.getArtifact();
+	public DependencyTree(Collection<Artifact> dependencies, Predicate<Artifact> filter) {
 		this.filter = filter;
-		for (Artifact artifact : project.getArtifacts()) {
+		for (Artifact artifact : dependencies) {
 			artifactMap.put(artifact.getId(), artifact);
 			List<String> dependencyTrail = artifact.getDependencyTrail();
 			for (int i = dependencyTrail.size() - 1; i > 0; i--) {
@@ -44,10 +41,6 @@ public class DependencyTree {
 		}
 	}
 
-	public List<Artifact> getDirectDependencies() {
-		return getDirectDependencies(root);
-	}
-
 	public List<Artifact> getDirectDependencies(Artifact artifact) {
 		return artifactSetMap.getOrDefault(artifact.getId(), Collections.emptySet()).stream()
 				.map(artifactMap::get)
@@ -56,53 +49,7 @@ public class DependencyTree {
 				.collect(Collectors.toList());
 	}
 
-	public List<Pair<Artifact, Artifact>> getDirectDependencyPairs(Artifact artifact) {
-		return artifactSetMap.getOrDefault(artifact.getId(), Collections.emptySet()).stream()
-				.map(artifactMap::get)
-				.filter(Objects::nonNull)
-				.filter(filter)
-				.map(child -> new Pair<>(artifact, child))
-				.collect(Collectors.toList());
-	}
-
-	public List<Artifact> getAllDependencies() {
-		return getAllDependencies(root);
-	}
-
-	public List<Artifact> getAllDependencies(Artifact artifact) {
-		List<Artifact> res = new ArrayList<>();
-		Queue<Artifact> queue = new ArrayDeque<>();
-		queue.add(artifact);
-
-		while(!queue.isEmpty()) {
-			Artifact polledArtifact = queue.poll();
-			List<Artifact> directDependencies = getDirectDependencies(polledArtifact);
-			queue.addAll(directDependencies);
-			res.addAll(directDependencies);
-		}
-
-		return res;
-	}
-
-	public List<Pair<Artifact, Artifact>> getAllDependencyPairs(Artifact artifact) {
-		List<Pair<Artifact, Artifact>> res = new ArrayList<>();
-		Queue<Artifact> queue = new ArrayDeque<>();
-		queue.add(artifact);
-
-		while(!queue.isEmpty()) {
-			Artifact polledArtifact = queue.poll();
-			List<Artifact> directDependencies = getDirectDependencies(polledArtifact);
-			queue.addAll(directDependencies);
-			for (Artifact directDependency : directDependencies) {
-				res.add(new Pair<>(polledArtifact, directDependency));
-			}
-		}
-
-		return res;
-	}
-
 	public void forEachDependencyPair(Artifact artifact, BiPredicate<Artifact, Artifact> dependencyHandler) {
-		List<Pair<Artifact, Artifact>> res = new ArrayList<>();
 		Queue<Artifact> queue = new ArrayDeque<>();
 		queue.add(artifact);
 

@@ -19,7 +19,7 @@ Alternatively, you can add plug-in to you `pom.xml`:
 <plugin>
     <groupId>com.github.fluorumlabs</groupId>
     <artifactId>dtrack-maven-plugin</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
 </plugin>
 ...
 ```
@@ -78,7 +78,10 @@ includedScopes: compile, runtime, system
 # Skip projects whose artifactIds contain any of specified comma-separated strings
 #
 # Also available as dtrack.excludedProjects property/environment variable
-excludedProjects: -test, -demo, -it
+excludedProjects: 
+  - -test
+  - -demo
+  - -it
 
 # Skip projects whose artifactIds (or parent projects' artifactIds) contain any of 
 # specified comma-separated strings
@@ -124,7 +127,7 @@ npmDependencies:
 <plugin>
     <groupId>com.github.fluorumlabs</groupId>
     <artifactId>dtrack-maven-plugin</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
     <configuration>
         <settings>
             <!--

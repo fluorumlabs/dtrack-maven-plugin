@@ -20,17 +20,12 @@ import com.github.fluorumlabs.dtrackmavenplugin.engine.NpmReactor;
 import io.github.classgraph.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.apache.maven.project.MavenProject;
 
-import java.io.File;
 import java.lang.reflect.Method;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.List;
 import java.util.Map;
 
 @Data
@@ -80,26 +75,14 @@ public class NpmDependency {
     @Parameter
     private String staticMethodName;
 
-    private static URL[] getClassLoaderURLs(MavenProject project, Log logger) throws
-            DependencyResolutionRequiredException,
-            MalformedURLException {
-        List<String> classpathElements = project.getCompileClasspathElements();
-        classpathElements.add(project.getBuild().getOutputDirectory());
-        URL[] urls = new URL[classpathElements.size()];
-        for (int i = 0; i < classpathElements.size(); ++i) {
-            urls[i] = new File(classpathElements.get(i)).toURI().toURL();
-        }
-        return urls;
-    }
-
-    public boolean addToReactor(MavenProject mavenProject, Log logger, NpmReactor reactor) {
+    public boolean addToReactor(URL[] classLoaderURLs, Log logger, NpmReactor reactor) {
         if (isPackageReference()) {
             reactor.addDependency(packageName, version);
             return true;
         } else if (isAnnotationReference()) {
-            return scanAnnotations(mavenProject, logger, reactor);
+            return scanAnnotations(classLoaderURLs, logger, reactor);
         } else if (isStaticMethodReference()) {
-            return invokeMethod(mavenProject, logger, reactor);
+            return invokeMethod(classLoaderURLs, logger, reactor);
         }
         return false;
     }
@@ -117,10 +100,10 @@ public class NpmDependency {
     }
 
     @SuppressWarnings("unchecked")
-    private boolean invokeMethod(MavenProject mavenProject, Log logger, NpmReactor npmReactor) {
+    private boolean invokeMethod(URL[] classLoaderURLs, Log logger, NpmReactor npmReactor) {
         boolean wasAdded = false;
         try {
-            ClassLoader classLoader = getClassLoader(mavenProject, logger);
+            URLClassLoader classLoader = new URLClassLoader(classLoaderURLs, getClass().getClassLoader());
             Class<?> aClass = classLoader.loadClass(staticMethodClassName);
             Method declaredMethod = aClass.getDeclaredMethod(staticMethodName);
             declaredMethod.setAccessible(true);
@@ -142,40 +125,25 @@ public class NpmDependency {
         return wasAdded;
     }
 
-    private boolean scanAnnotations(MavenProject mavenProject, Log logger, NpmReactor npmReactor) {
+    private boolean scanAnnotations(URL[] classLoaderURLs, Log logger, NpmReactor npmReactor) {
         boolean wasAdded = false;
-        try {
-            URL[] classLoaderURLs = getClassLoaderURLs(mavenProject, logger);
-            try (ScanResult scanResult = new ClassGraph().enableAllInfo().acceptPackages("*")
-                    .overrideClassLoaders(new URLClassLoader(classLoaderURLs))
-                    .scan()) {
-                ClassInfoList classesWithAnnotation = scanResult.getClassesWithAnnotation(annotationClassName);
-                for (ClassInfo classInfo : classesWithAnnotation) {
-                    for (AnnotationInfo annotationInfo : classInfo.getAnnotationInfoRepeatable(annotationClassName)) {
-                        AnnotationParameterValueList parameterValues = annotationInfo.getParameterValues();
-                        String actualPackageName = (String) parameterValues.getValue(annotationPackageNameField);
-                        String actualVersion = (String) parameterValues.getValue(annotationVersionField);
-                        if (actualPackageName != null && actualVersion != null && !actualPackageName.isEmpty() && !actualVersion.isEmpty()) {
-                            npmReactor.addDependency(actualPackageName, actualVersion);
-                            wasAdded = true;
-                        }
+        try (ScanResult scanResult = new ClassGraph().enableAllInfo().acceptPackages("*")
+                .overrideClassLoaders(new URLClassLoader(classLoaderURLs))
+                .scan()) {
+            ClassInfoList classesWithAnnotation = scanResult.getClassesWithAnnotation(annotationClassName);
+            for (ClassInfo classInfo : classesWithAnnotation) {
+                for (AnnotationInfo annotationInfo : classInfo.getAnnotationInfoRepeatable(annotationClassName)) {
+                    AnnotationParameterValueList parameterValues = annotationInfo.getParameterValues();
+                    String actualPackageName = (String) parameterValues.getValue(annotationPackageNameField);
+                    String actualVersion = (String) parameterValues.getValue(annotationVersionField);
+                    if (actualPackageName != null && actualVersion != null && !actualPackageName.isEmpty() && !actualVersion.isEmpty()) {
+                        npmReactor.addDependency(actualPackageName, actualVersion);
+                        wasAdded = true;
                     }
                 }
             }
-        } catch (DependencyResolutionRequiredException | MalformedURLException e) {
-            logger.debug("Couldn't load dependencies", e);
         }
         return wasAdded;
-    }
-
-    private ClassLoader getClassLoader(MavenProject project, Log logger) {
-        try {
-            URL[] urls = getClassLoaderURLs(project, logger);
-            return new URLClassLoader(urls, getClass().getClassLoader());
-        } catch (Exception e) {
-            logger.error("Couldn't load dependencies", e);
-            return getClass().getClassLoader();
-        }
     }
 
 }

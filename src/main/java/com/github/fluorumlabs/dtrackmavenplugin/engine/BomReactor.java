@@ -33,7 +33,9 @@ import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.cyclonedx.BomGeneratorFactory;
 import org.cyclonedx.CycloneDxSchema;
+import org.cyclonedx.exception.GeneratorException;
 import org.cyclonedx.generators.json.BomJsonGenerator;
+import org.cyclonedx.generators.xml.BomXmlGenerator;
 import org.cyclonedx.model.*;
 import org.cyclonedx.util.BomUtils;
 import org.cyclonedx.util.LicenseResolver;
@@ -84,15 +86,15 @@ public class BomReactor {
         }
     }
 
-    private static boolean doesComponentHaveExternalReference(Component component, ExternalReference.Type type) {
+    private static boolean haveNoExternalReference(Component component, ExternalReference.Type type) {
         if (component.getExternalReferences() != null && !component.getExternalReferences().isEmpty()) {
             for (ExternalReference ref : component.getExternalReferences()) {
                 if (type == ref.getType()) {
-                    return true;
+                    return false;
                 }
             }
         }
-        return false;
+        return true;
     }
 
     private static LicenseChoice resolveMavenLicenses(List<org.apache.maven.model.License> projectLicenses) {
@@ -170,30 +172,30 @@ public class BomReactor {
             }
         }
         if (project.getOrganization() != null && project.getOrganization().getUrl() != null) {
-            if (!doesComponentHaveExternalReference(component, ExternalReference.Type.WEBSITE)) {
+            if (haveNoExternalReference(component, ExternalReference.Type.WEBSITE)) {
                 addExternalReference(ExternalReference.Type.WEBSITE, project.getOrganization().getUrl(), component);
             }
         }
         if (project.getCiManagement() != null && project.getCiManagement().getUrl() != null) {
-            if (!doesComponentHaveExternalReference(component, ExternalReference.Type.BUILD_SYSTEM)) {
+            if (haveNoExternalReference(component, ExternalReference.Type.BUILD_SYSTEM)) {
                 addExternalReference(ExternalReference.Type.BUILD_SYSTEM, project.getCiManagement().getUrl(),
                         component);
             }
         }
         if (project.getDistributionManagement() != null && project.getDistributionManagement().getDownloadUrl() != null) {
-            if (!doesComponentHaveExternalReference(component, ExternalReference.Type.DISTRIBUTION)) {
+            if (haveNoExternalReference(component, ExternalReference.Type.DISTRIBUTION)) {
                 addExternalReference(ExternalReference.Type.DISTRIBUTION,
                         project.getDistributionManagement().getDownloadUrl(), component);
             }
         }
         if (project.getDistributionManagement() != null && project.getDistributionManagement().getRepository() != null) {
-            if (!doesComponentHaveExternalReference(component, ExternalReference.Type.DISTRIBUTION)) {
+            if (haveNoExternalReference(component, ExternalReference.Type.DISTRIBUTION)) {
                 addExternalReference(ExternalReference.Type.DISTRIBUTION,
                         project.getDistributionManagement().getRepository().getUrl(), component);
             }
         }
         if (project.getIssueManagement() != null && project.getIssueManagement().getUrl() != null) {
-            if (!doesComponentHaveExternalReference(component, ExternalReference.Type.ISSUE_TRACKER)) {
+            if (haveNoExternalReference(component, ExternalReference.Type.ISSUE_TRACKER)) {
                 addExternalReference(ExternalReference.Type.ISSUE_TRACKER, project.getIssueManagement().getUrl(),
                         component);
             }
@@ -201,18 +203,18 @@ public class BomReactor {
         if (project.getMailingLists() != null && !project.getMailingLists().isEmpty()) {
             for (MailingList list : project.getMailingLists()) {
                 if (list.getArchive() != null) {
-                    if (!doesComponentHaveExternalReference(component, ExternalReference.Type.MAILING_LIST)) {
+                    if (haveNoExternalReference(component, ExternalReference.Type.MAILING_LIST)) {
                         addExternalReference(ExternalReference.Type.MAILING_LIST, list.getArchive(), component);
                     }
                 } else if (list.getSubscribe() != null) {
-                    if (!doesComponentHaveExternalReference(component, ExternalReference.Type.MAILING_LIST)) {
+                    if (haveNoExternalReference(component, ExternalReference.Type.MAILING_LIST)) {
                         addExternalReference(ExternalReference.Type.MAILING_LIST, list.getSubscribe(), component);
                     }
                 }
             }
         }
         if (project.getScm() != null && project.getScm().getUrl() != null) {
-            if (!doesComponentHaveExternalReference(component, ExternalReference.Type.VCS)) {
+            if (haveNoExternalReference(component, ExternalReference.Type.VCS)) {
                 addExternalReference(ExternalReference.Type.VCS, project.getScm().getUrl(), component);
             }
         }
@@ -295,6 +297,26 @@ public class BomReactor {
                 .bom(Base64.getEncoder().encodeToString(bomJson.getBytes(StandardCharsets.UTF_8)));
 
         bomApi.uploadBom1(submitRequest);
+    }
+
+    public void write(Path target, String groupId, String artifactId, String version) throws ApiException {
+        String bomFileName = String.join("-", groupId, artifactId, version, "cyclonedx");
+        Path jsonTarget = target.resolve(bomFileName + ".json");
+        Path xmlTarget = target.resolve(bomFileName + ".xml");
+        try {
+            Files.deleteIfExists(jsonTarget);
+            Files.deleteIfExists(xmlTarget);
+
+            BomJsonGenerator bomGenerator = BomGeneratorFactory.createJson(CycloneDxSchema.Version.VERSION_12, bom);
+            Files.write(jsonTarget, bomGenerator.toJsonString().getBytes(StandardCharsets.UTF_8));
+            log.info("> "+bomFileName+".json");
+
+            BomXmlGenerator xmlGenerator = BomGeneratorFactory.createXml(CycloneDxSchema.Version.VERSION_12, bom);
+            Files.write(xmlTarget, xmlGenerator.toXmlString().getBytes(StandardCharsets.UTF_8));
+            log.info("> "+bomFileName+".xml");
+        } catch (IOException | GeneratorException e) {
+            log.error("Unable to write SBOM to disk", e);
+        }
     }
 
     public Component buildComponent(Artifact artifact, String projectType) throws IOException {
