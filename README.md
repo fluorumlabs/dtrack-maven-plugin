@@ -1,6 +1,6 @@
 # dtrack-maven-plugin
 
-![Maven Central](https://img.shields.io/maven-central/v/com.github.fluorumlabs/dtrack-maven-plugin)
+[![Maven Central](https://img.shields.io/maven-central/v/com.github.fluorumlabs/dtrack-maven-plugin)](https://repo.maven.apache.org/maven2/com/github/fluorumlabs/dtrack-maven-plugin/)
 
 `dtrack-maven-plugin` is an easy-to-use tool to generate SBOM (software bill of materials) and upload them to [Dependency-Track](https://dependencytrack.org/) SCA.
 It is specifically designed for simplified CI/CD integration and can work without any changes to project `pom.xml` files.
