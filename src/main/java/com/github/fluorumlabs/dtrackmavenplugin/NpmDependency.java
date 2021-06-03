@@ -63,14 +63,15 @@ public class NpmDependency {
 
     /**
      * Declaring class name of a static method without parameters returning
-     * Map&lt;String,String&gt; with package names as a keys and versions as a values.
+     * Map&lt;String,String&gt; with package names as a keys and versions as a
+     * values.
      */
     @Parameter
     private String staticMethodClassName;
 
     /**
-     * Name of static method without parameters returning
-     * Map&lt;String,String&gt; with package names as a keys and versions as a values.
+     * Name of static method without parameters returning Map&lt;String,String&gt;
+     * with package names as a keys and versions as a values.
      */
     @Parameter
     private String staticMethodName;
@@ -80,7 +81,7 @@ public class NpmDependency {
             reactor.addDependency(packageName, version);
             return true;
         } else if (isAnnotationReference()) {
-            return scanAnnotations(classLoaderURLs, logger, reactor);
+            return scanAnnotations(classLoaderURLs, reactor);
         } else if (isStaticMethodReference()) {
             return invokeMethod(classLoaderURLs, logger, reactor);
         }
@@ -102,8 +103,7 @@ public class NpmDependency {
     @SuppressWarnings("unchecked")
     private boolean invokeMethod(URL[] classLoaderURLs, Log logger, NpmReactor npmReactor) {
         boolean wasAdded = false;
-        try {
-            URLClassLoader classLoader = new URLClassLoader(classLoaderURLs, getClass().getClassLoader());
+        try (URLClassLoader classLoader = new URLClassLoader(classLoaderURLs, getClass().getClassLoader())) {
             Class<?> aClass = classLoader.loadClass(staticMethodClassName);
             Method declaredMethod = aClass.getDeclaredMethod(staticMethodName);
             declaredMethod.setAccessible(true);
@@ -115,8 +115,15 @@ public class NpmDependency {
             if (result instanceof Map) {
                 Map<String, String> mappedResult = (Map<String, String>) result;
                 for (Map.Entry<String, String> stringStringEntry : mappedResult.entrySet()) {
-                    npmReactor.addDependency(stringStringEntry.getKey(), stringStringEntry.getValue());
-                    wasAdded = true;
+                    if (stringStringEntry.getKey() instanceof String
+                            && stringStringEntry.getValue() instanceof String) {
+                        npmReactor.addDependency(stringStringEntry.getKey(), stringStringEntry.getValue());
+                        wasAdded = true;
+                    } else {
+                        logger.error("Method " + staticMethodClassName + "." + staticMethodName
+                                + " returned unsupported value " + stringStringEntry.getKey() + " -> "
+                                + stringStringEntry.getValue());
+                    }
                 }
             }
         } catch (Exception e) {
@@ -125,18 +132,18 @@ public class NpmDependency {
         return wasAdded;
     }
 
-    private boolean scanAnnotations(URL[] classLoaderURLs, Log logger, NpmReactor npmReactor) {
+    private boolean scanAnnotations(URL[] classLoaderURLs, NpmReactor npmReactor) {
         boolean wasAdded = false;
         try (ScanResult scanResult = new ClassGraph().enableAllInfo().acceptPackages("*")
-                .overrideClassLoaders(new URLClassLoader(classLoaderURLs))
-                .scan()) {
+                .overrideClassLoaders(new URLClassLoader(classLoaderURLs)).scan()) {
             ClassInfoList classesWithAnnotation = scanResult.getClassesWithAnnotation(annotationClassName);
             for (ClassInfo classInfo : classesWithAnnotation) {
                 for (AnnotationInfo annotationInfo : classInfo.getAnnotationInfoRepeatable(annotationClassName)) {
                     AnnotationParameterValueList parameterValues = annotationInfo.getParameterValues();
                     String actualPackageName = (String) parameterValues.getValue(annotationPackageNameField);
                     String actualVersion = (String) parameterValues.getValue(annotationVersionField);
-                    if (actualPackageName != null && actualVersion != null && !actualPackageName.isEmpty() && !actualVersion.isEmpty()) {
+                    if (actualPackageName != null && actualVersion != null && !actualPackageName.isEmpty()
+                            && !actualVersion.isEmpty()) {
                         npmReactor.addDependency(actualPackageName, actualVersion);
                         wasAdded = true;
                     }

@@ -53,16 +53,15 @@ import java.util.function.Predicate;
 /**
  * A goal to generate SBOM (software bill of materials).
  * <p>
- * It is specifically designed for simplified CI/CD integration and can work without any
- * changes to project `pom.xml` files. One of the key differences from the traditional
- * cyclonedx-maven-plugin/dependency-track-maven-plugin combination is that dtrack-maven-plugin
- * can be used to extract NPM dependencies, specified inside Vaadin projects.
+ * It is specifically designed for simplified CI/CD integration and can work
+ * without any changes to project `pom.xml` files. One of the key differences
+ * from the traditional cyclonedx-maven-plugin/dependency-track-maven-plugin
+ * combination is that dtrack-maven-plugin can be used to extract NPM
+ * dependencies, specified inside Vaadin projects.
  * <p>
  * Note that NPM dependency resolution requires NPM installation.
  */
-@Mojo(name = "generate",
-        requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME,
-        requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
+@Mojo(name = "generate", requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
 public class DtrackGenerateMojo extends AbstractMojo {
     private final Map<String, Component> componentMap = new HashMap<>();
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
@@ -73,15 +72,16 @@ public class DtrackGenerateMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project.build.directory}", required = true, readonly = true)
     private File buildDirectory;
     /**
-     * Plug-in configuration. dtrack-maven-plugin reads configuration from several sources:
+     * Plug-in configuration. dtrack-maven-plugin reads configuration from several
+     * sources:
      * <p>
-     * 1. System environment variables
-     * 2. ~/.dtrack.yml in the user home directory
-     * 3. Plug-in configuration in pom.xml
-     * 4. .dtrack.yml in the project directory (or in the parent projects)
-     * 5. Properties (either in pom.xml or passed via command line)
+     * 1. System environment variables 2. ~/.dtrack.yml in the user home directory
+     * 3. Plug-in configuration in pom.xml 4. .dtrack.yml in the project directory
+     * (or in the parent projects) 5. Properties (either in pom.xml or passed via
+     * command line)
      * <p>
-     * See https://github.com/fluorumlabs/dtrack-maven-plugin/README.md for more details.
+     * See https://github.com/fluorumlabs/dtrack-maven-plugin/README.md for more
+     * details.
      */
     @Parameter
     private PluginConfiguration settings;
@@ -101,13 +101,16 @@ public class DtrackGenerateMojo extends AbstractMojo {
         return Collections.emptyList();
     }
 
-    private static void applyConfiguration(PluginConfiguration.PluginConfigurationBuilder builder, Properties properties) throws MojoFailureException {
+    private static void applyConfiguration(PluginConfiguration.PluginConfigurationBuilder builder,
+            Properties properties) throws MojoFailureException {
         builder.apiServer(properties.getProperty("dtrack.apiServer"));
         builder.apiKey(properties.getProperty("dtrack.apiKey"));
-        builder.includedScopes(new ArrayList<>(getStringList(properties, "dtrack.includedScopes", "compile,runtime,system")));
+        builder.includedScopes(
+                new ArrayList<>(getStringList(properties, "dtrack.includedScopes", "compile,runtime,system")));
         builder.npmDependencies(new ArrayList<>());
         builder.excludedProjects(new ArrayList<>(getStringList(properties, "dtrack.excludedProjects", null)));
-        builder.excludedProjectHierarchies(new ArrayList<>(getStringList(properties, "dtrack.excludedProjectHierarchies", null)));
+        builder.excludedProjectHierarchies(
+                new ArrayList<>(getStringList(properties, "dtrack.excludedProjectHierarchies", null)));
 
         String value = properties.getProperty("dtrack.keepPreviousVersions");
         if (value != null) {
@@ -124,7 +127,8 @@ public class DtrackGenerateMojo extends AbstractMojo {
         }
     }
 
-    private static void applyConfigutationFromEnv(PluginConfiguration.PluginConfigurationBuilder builder) throws MojoFailureException {
+    private static void applyConfigutationFromEnv(PluginConfiguration.PluginConfigurationBuilder builder)
+            throws MojoFailureException {
         Properties env = new Properties();
         for (Map.Entry<String, String> stringStringEntry : System.getenv().entrySet()) {
             env.setProperty(stringStringEntry.getKey(), stringStringEntry.getValue());
@@ -144,10 +148,12 @@ public class DtrackGenerateMojo extends AbstractMojo {
 
     }
 
-    private void applyConfigurationFromProperties(PluginConfiguration.PluginConfigurationBuilder builder) throws MojoFailureException {
+    private void applyConfigurationFromProperties(PluginConfiguration.PluginConfigurationBuilder builder)
+            throws MojoFailureException {
         applyConfiguration(builder, project.getProperties());
         builder.projectType(project.getProperties().getProperty("dtrack.projectType", "library"));
-        builder.projectName(project.getProperties().getProperty("dtrack.projectName", project.getGroupId() + "/" + project.getArtifactId()));
+        builder.projectName(project.getProperties().getProperty("dtrack.projectName",
+                project.getGroupId() + "/" + project.getArtifactId()));
     }
 
     private void readConfiguration() throws MojoFailureException {
@@ -161,9 +167,7 @@ public class DtrackGenerateMojo extends AbstractMojo {
         if (homeDirectory != null) {
             Path dtrackYml = Paths.get(homeDirectory, ".dtrack.yml");
             if (dtrackYml.toFile().exists()) {
-                PluginConfiguration.readYaml(dtrackYml)
-                        .orElseGet(PluginConfiguration::new)
-                        .withDefaults()
+                PluginConfiguration.readYaml(dtrackYml).orElseGet(PluginConfiguration::new).withDefaults()
                         .mergeInto(configurationBuilder);
             }
         }
@@ -173,13 +177,12 @@ public class DtrackGenerateMojo extends AbstractMojo {
             settings.mergeInto(configurationBuilder);
         }
 
-        // Priority 2 - overrides in current .dtrack.yml, or .dtrack.yml in one of the parents
+        // Priority 2 - overrides in current .dtrack.yml, or .dtrack.yml in one of the
+        // parents
         for (MavenProject mavenProject : parents) {
             Path dtrackYml = mavenProject.getModel().getPomFile().toPath().getParent().resolve(".dtrack.yml");
             if (dtrackYml.toFile().exists()) {
-                PluginConfiguration.readYaml(dtrackYml)
-                        .orElseGet(PluginConfiguration::new)
-                        .withDefaults()
+                PluginConfiguration.readYaml(dtrackYml).orElseGet(PluginConfiguration::new).withDefaults()
                         .mergeInto(configurationBuilder);
             }
         }
@@ -199,15 +202,15 @@ public class DtrackGenerateMojo extends AbstractMojo {
 
         if (shouldSkip()) {
             getLog().info("Skipping excluded artifact");
-            return;
-        }
+        } else {
 
-        try {
-            startBomReactor();
-            processDependencies();
-            processBom();
-        } catch (IOException | ApiException | ProjectBuildingException e) {
-            getLog().error("Cannot create or upload BOM to Dependency-Track", e);
+            try {
+                startBomReactor();
+                processDependencies();
+                processBom();
+            } catch (IOException | ApiException | ProjectBuildingException e) {
+                getLog().error("Cannot create or upload BOM to Dependency-Track", e);
+            }
         }
 
     }
@@ -226,12 +229,16 @@ public class DtrackGenerateMojo extends AbstractMojo {
             return true;
         }
         for (MavenProject mavenProject : parents) {
-            // Skip if current project directory (or one of the parents) contains .dtrackignore file
-            if (Files.exists(mavenProject.getOriginalModel().getPomFile().toPath().getParent().resolve(".dtrackignore"))) {
+            // Skip if current project directory (or one of the parents) contains
+            // .dtrackignore file
+            if (Files.exists(
+                    mavenProject.getOriginalModel().getPomFile().toPath().getParent().resolve(".dtrackignore"))) {
                 return true;
             }
-            // Skip if current artifactId or it's parents contain substrings from excludedProjectHierarchies
-            if (configuration.getExcludedProjectHierarchies().stream().anyMatch(ep -> mavenProject.getArtifactId().contains(ep))) {
+            // Skip if current artifactId or it's parents contain substrings from
+            // excludedProjectHierarchies
+            if (configuration.getExcludedProjectHierarchies().stream()
+                    .anyMatch(ep -> mavenProject.getArtifactId().contains(ep))) {
                 return true;
             }
         }
@@ -262,7 +269,8 @@ public class DtrackGenerateMojo extends AbstractMojo {
         processNpmDependencies(projectToScan);
     }
 
-    private MavenProject inlineDependencyManagement(MavenProject originalProject) throws IOException, ProjectBuildingException {
+    private MavenProject inlineDependencyManagement(MavenProject originalProject)
+            throws IOException, ProjectBuildingException {
         Model model = originalProject.getModel().clone();
 
         // Copy dependency management to dependencies, omitting versions
@@ -280,13 +288,13 @@ public class DtrackGenerateMojo extends AbstractMojo {
             new MavenXpp3Writer().write(wrt, model);
         }
 
-        ProjectBuildingRequest projectBuildingRequest =
-                new DefaultProjectBuildingRequest(session.getProjectBuildingRequest());
+        ProjectBuildingRequest projectBuildingRequest = new DefaultProjectBuildingRequest(
+                session.getProjectBuildingRequest());
 
         projectBuildingRequest.setResolveDependencies(true);
         ProjectBuildingResult build = projectBuilder.build(tempPom, projectBuildingRequest);
 
-        tempPom.delete();
+        Files.delete(tempPom.toPath());
 
         return build.getProject();
     }
@@ -323,15 +331,13 @@ public class DtrackGenerateMojo extends AbstractMojo {
         }
     }
 
-
     protected void processBom() throws ApiException, MojoFailureException {
         getLog().info("Writing BOM...");
         bomReactor.write(buildDirectory.toPath(), project.getGroupId(), project.getArtifactId(), project.getVersion());
     }
 
     private Predicate<Artifact> getArtifactFilter() {
-        return artifact -> configuration.getIncludedScopes().contains(artifact.getScope())
-                && !artifact.hasClassifier();
+        return artifact -> configuration.getIncludedScopes().contains(artifact.getScope()) && !artifact.hasClassifier();
     }
 
     protected boolean processDependency(Artifact parent, Artifact child) {

@@ -32,8 +32,7 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 public class NpmReactor {
-	private static final boolean IS_WINDOWS = System.getProperty("os.name")
-			.toLowerCase().startsWith("windows");
+	private static final boolean IS_WINDOWS = System.getProperty("os.name").toLowerCase().startsWith("windows");
 
 	public NpmReactor(AbstractMojo mojo, BomReactor bomReactor) {
 		this.mojo = mojo;
@@ -49,7 +48,7 @@ public class NpmReactor {
 			mojo.getLog().info("Collecting additional " + dependencies.size() + " NPM dependencies...");
 			JsonObject packageJson = new JsonObject();
 			packageJson.addProperty("name", "dtrack-maven-plugin-temp");
-			packageJson.addProperty("version", "1.0.0");
+			packageJson.addProperty("version", "1.1.1");
 			packageJson.addProperty("license", "ISC");
 			packageJson.addProperty("description", "");
 			packageJson.add("dependencies", dependencies);
@@ -73,9 +72,7 @@ public class NpmReactor {
 				bomReactor.mergeBom(parsedProject);
 
 				try (Stream<Path> files = Files.walk(npm)) {
-					files.sorted(Comparator.reverseOrder())
-							.map(Path::toFile)
-							.forEach(File::delete);
+					files.sorted(Comparator.reverseOrder()).map(Path::toFile).forEach(File::delete);
 				}
 
 				dependencies = new JsonObject();
@@ -88,9 +85,9 @@ public class NpmReactor {
 	private int exec(Path npm, String cmd) throws IOException, InterruptedException {
 		Process process;
 		if (IS_WINDOWS) {
-			process = Runtime.getRuntime().exec(new String[]{"cmd.exe", "/c", cmd}, null, npm.toFile());
+			process = Runtime.getRuntime().exec(new String[] { "cmd.exe", "/c", cmd }, null, npm.toFile());
 		} else {
-			process = Runtime.getRuntime().exec(new String[]{"sh", "-c", cmd}, null, npm.toFile());
+			process = Runtime.getRuntime().exec(new String[] { "sh", "-c", cmd }, null, npm.toFile());
 		}
 		Executors.newSingleThreadExecutor().submit(new StreamGobbler(process.getInputStream(), mojo.getLog()::info));
 		return process.waitFor();
@@ -113,8 +110,7 @@ public class NpmReactor {
 
 		@Override
 		public void run() {
-			new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8)).lines()
-					.forEach(consumer);
+			new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8)).lines().forEach(consumer);
 		}
 	}
 }
