@@ -331,7 +331,7 @@ public class DtrackGenerateMojo extends AbstractMojo {
         }
     }
 
-    protected void processBom() throws ApiException, MojoFailureException {
+    protected void processBom() throws ApiException {
         getLog().info("Writing BOM...");
         bomReactor.write(buildDirectory.toPath(), project.getGroupId(), project.getArtifactId(), project.getVersion());
     }
