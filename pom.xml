@@ -91,7 +91,7 @@
             <scope>provided</scope>
             <groupId>org.apache.maven</groupId>
             <artifactId>maven-core</artifactId>
-            <version>3.8.1</version>
+            <version>3.8.2</version>
         </dependency>
         <dependency>
             <scope>provided</scope>
@@ -135,7 +135,7 @@
         <dependency>
             <groupId>org.yaml</groupId>
             <artifactId>snakeyaml</artifactId>
-            <version>1.28</version>
+            <version>1.29</version>
         </dependency>
         <dependency>
             <groupId>org.cyclonedx</groupId>
