@@ -57,7 +57,7 @@ public class DtrackUploadMojo extends DtrackGenerateMojo {
     }
 
     protected void cleanupPreviousVersions() {
-        if (getConfiguration().getKeepPreviousVersions() == Semver.VersionDiff.BUILD) {
+        if (getConfiguration().getKeepPreviousVersions() == null || getConfiguration().getKeepPreviousVersions() == Semver.VersionDiff.BUILD) {
             return;
         }
         getLog().info("Cleaning up previous versions...");
