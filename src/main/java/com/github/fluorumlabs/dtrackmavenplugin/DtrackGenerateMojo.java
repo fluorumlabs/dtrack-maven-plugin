@@ -24,11 +24,6 @@ import com.vdurmont.semver4j.Semver;
 import lombok.Getter;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
-import org.apache.maven.execution.MavenSession;
-import org.apache.maven.model.Dependency;
-import org.apache.maven.model.DependencyManagement;
-import org.apache.maven.model.Model;
-import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -39,9 +34,7 @@ import org.apache.maven.project.*;
 import org.cyclonedx.model.Component;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.Writer;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
@@ -67,8 +60,6 @@ public class DtrackGenerateMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     @Getter
     private MavenProject project;
-    @Parameter(property = "session", readonly = true, required = true)
-    private MavenSession session;
     @Parameter(defaultValue = "${project.build.directory}", required = true, readonly = true)
     private File buildDirectory;
     /**
@@ -85,8 +76,6 @@ public class DtrackGenerateMojo extends AbstractMojo {
      */
     @Parameter
     private PluginConfiguration settings;
-    @org.apache.maven.plugins.annotations.Component
-    private ProjectBuilder projectBuilder;
     @Getter
     private PluginConfiguration configuration;
     private List<MavenProject> parents;
@@ -216,6 +205,11 @@ public class DtrackGenerateMojo extends AbstractMojo {
     }
 
     private boolean shouldSkip() {
+        // Skip BOMs
+        if (project.getPackaging().equalsIgnoreCase("pom")) {
+            return true;
+        }
+
         // Skip parent module
         if (!project.getModules().isEmpty()) {
             return true;
@@ -256,47 +250,12 @@ public class DtrackGenerateMojo extends AbstractMojo {
     protected void processDependencies() throws IOException, ProjectBuildingException {
         MavenProject projectToScan = project;
 
-        if (project.getPackaging().equalsIgnoreCase("pom")) {
-            getLog().info("Collecting managed dependencies...");
-            projectToScan = inlineDependencyManagement(project);
-        } else {
-            getLog().info("Collecting dependencies...");
-        }
+        getLog().info("Collecting dependencies...");
 
         DependencyTree dependencyTree = new DependencyTree(projectToScan.getArtifacts(), getArtifactFilter());
         dependencyTree.forEachDependencyPair(projectToScan.getArtifact(), this::processDependency);
 
         processNpmDependencies(projectToScan);
-    }
-
-    private MavenProject inlineDependencyManagement(MavenProject originalProject)
-            throws IOException, ProjectBuildingException {
-        Model model = originalProject.getModel().clone();
-
-        // Copy dependency management to dependencies, omitting versions
-        DependencyManagement effectiveDependencyManagement = originalProject.getDependencyManagement();
-        if (effectiveDependencyManagement != null && effectiveDependencyManagement.getDependencies() != null) {
-            for (Dependency dependency : effectiveDependencyManagement.getDependencies()) {
-                Dependency clone = dependency.clone();
-                clone.setVersion(null);
-                model.addDependency(clone);
-            }
-        }
-
-        File tempPom = Files.createTempFile("mvn", "pom").toFile();
-        try (Writer wrt = new FileWriter(tempPom)) {
-            new MavenXpp3Writer().write(wrt, model);
-        }
-
-        ProjectBuildingRequest projectBuildingRequest = new DefaultProjectBuildingRequest(
-                session.getProjectBuildingRequest());
-
-        projectBuildingRequest.setResolveDependencies(true);
-        ProjectBuildingResult build = projectBuilder.build(tempPom, projectBuildingRequest);
-
-        Files.delete(tempPom.toPath());
-
-        return build.getProject();
     }
 
     private void processNpmDependencies(MavenProject mavenProject) {

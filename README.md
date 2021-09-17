@@ -10,7 +10,7 @@ One of the key differences from the traditional `cyclonedx-maven-plugin`/`depend
 
 Even though this plug-in is not bound by default to any of the life-cycle stages, it requires the projects to be built before running:
 
-`mvn package com.github.fluorumlabs:dtrack-maven-plugin:1.1.0:upload`
+`mvn package com.github.fluorumlabs:dtrack-maven-plugin:1.1.2:upload`
 
 Alternatively, you can add plug-in to you `pom.xml`:
 
@@ -19,7 +19,7 @@ Alternatively, you can add plug-in to you `pom.xml`:
 <plugin>
     <groupId>com.github.fluorumlabs</groupId>
     <artifactId>dtrack-maven-plugin</artifactId>
-    <version>1.1.0</version>
+    <version>1.1.2</version>
 </plugin>
 ...
 ```
@@ -129,7 +129,7 @@ npmDependencies:
 <plugin>
     <groupId>com.github.fluorumlabs</groupId>
     <artifactId>dtrack-maven-plugin</artifactId>
-    <version>1.1.0</version>
+    <version>1.1.2</version>
     <configuration>
         <settings>
             <!--
